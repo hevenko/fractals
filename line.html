@@ -121,7 +121,7 @@ function pipe2D(x, y, length, pipeAngle, kneeAngle, pipes, n) {
   var turnAngle = 360/n
   var segment = pipeLine(x, y, length, pipeAngle, kneeAngle, pipes)
   for (var i=1;i<n;i++) {
-    segment = pipeLine(segment.x2, segment.y2, length, turnAngle*i, kneeAngle, pipes)
+    segment = pipeLine(segment.x2, segment.y2, length, pipeAngle+turnAngle*i, kneeAngle, pipes)
   }
 }
 function line(x,y,x1,y1, dashed) {
