@@ -2,17 +2,14 @@
 <html>
 <head>
  <style>
-canvas {
-  float: right;
-}
-
-</style>
+  canvas {
+    float: right;
+  }
+ </style>
 </head>
 <body>
 
-<canvas id="myCanvas" width="1050" height="850" style="border:1px solid #d3d3d3;">
-</canvas>
-
+<canvas id="myCanvas" width="1050" height="850" style="border:1px solid #d3d3d3;"></canvas>
 <script>
 
 function pLine(x1, y1, x2, y2) {
@@ -22,10 +19,7 @@ function pLine(x1, y1, x2, y2) {
   this.y2 = y2
 }
 
-var c = document.getElementById("myCanvas");
-
 function btnClick() {
-  //clearCanvas(document.getElementById("myCanvas"),c.getContext("2d"))
   var x = document.getElementById('x').value*1
   var y = document.getElementById('y').value*1
   var length = document.getElementById('duljina').value*1
@@ -40,44 +34,48 @@ function btnClick() {
     var ctx = c.getContext("2d");
     clearCanvas(c,ctx)
   }
+  //make pipe
   pipe2D(x, y, length, pipeAngle, kneeAngle, segments, sides)
-  //pipeLine(x, y, length, pipeAngle, kneeAngle, pipes, obrisi)
-  //var l1 = lineAtAngle(160,160, 50, aAngle)
-  //pipeLine(l1, 50, kneeAngle, 6)
-  //lineAtAngle(l1.x2,l1.y2, 50, -1*(180-aAngle-kneeAngle))
-  //var anlineAngle(l1)
-  //var l2 = pipeLine(l1,50,-1*(180-aAngle-koleno))
-  //  var l3 = pipeLine(l2,50,-1*aAngle)
 }
 function clearCanvas(canvas,ctx) {
   event.preventDefault();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
-
+//angle between two lines in gradians
 function linesAngle(l1, l2) {
-  var l1ang = lineAngle(l1)
-  var l2ang = lineAngle(l2)
+  var l1ang = pipeAngle(l1)
+  var l2ang = pipeAngle(l2)
   return Math.abs(l1ang-l2ang)
 }
-function alignDelta(x, y, length, kneeAngle, pipes) {//need firs and last coordinates
-  var pipeAngle = 0;
+/**
+* a pipe is a line of given length and angle to x-axis -> pipe(...). It's a vector.
+* pipeline consists of several pipes, it's axis is a dotted line connecting
+* start of it's first pipe and end of it's last pipe.
+* angle between it's first pipe and it's axis is called misalign angle -> misalignAngle()
+* eg: if first pipe is aligned with x-axis pipeline axis would be at this angle to x-axixs
+*/
+function misalignAngle(x, y, length, kneeAngle, pipes) {//need firs and last coordinates
+  var initialAngle = 0;
   var c = document.getElementById("myCanvas");
   var ctx = c.getContext("2d");
   var ar = new Array();
-  var aLine = lineAtAngle(x,y, length, pipeAngle)
+  var aLine = pipe(x,y, length, initialAngle)
   ar[0] = aLine;
-  var angle1 = lineAngle(aLine)
+  var angle1 = pipeAngle(aLine)
   var absKneeAngle = (180-angle1-kneeAngle)
   for(var i=1;i<pipes;i++) {
-   aLine = lineAtAngle(aLine.x2, aLine.y2, length, i % 2 == 1 ? absKneeAngle : angle1)
+   aLine = pipe(aLine.x2, aLine.y2, length, i % 2 == 1 ? absKneeAngle : angle1)
    ar[i] = aLine;
   }
   var axis = new pLine(x,y,aLine.x2,aLine.y2)
   var delta = linesAngle(ar[0],axis)
-  console.log('alignDelta:'+delta)
+  console.log('misalignAngle:'+delta)
   return delta
 }
-function lineAngle(aLine) {
+/**
+* angle of pipe to x-axis range: 0-360, counter clockwise
+*/
+function pipeAngle(aLine) {
   var c = document.getElementById("myCanvas");
   var dx = (aLine.x2 - aLine.x1)
   var dy = (aLine.y2 - aLine.y1)
@@ -86,37 +84,46 @@ function lineAngle(aLine) {
   //console.log((aLine.y2 - aLine.y1) / (aLine.x2 - aLine.x1))
   res = Math.round(res / (Math.PI / 180.0))
   //console.log('kut:'+res)
+  
+  // ajusting to 0-360 range
   res = dx < 0 && dy >= 0 ? 180 + res : res
   res = dx < 0 && dy < 0 ? 180 + res : res
   res = dx == 0 && dy < 0 ? 180 - res : res
   return res
 }
-function pipeLine(x, y, length, pipeAngle, kneeAngle, pipes) {
-  var delta = alignDelta(x, y, length, kneeAngle, pipes)
-  pipeAngle = pipeAngle + delta
+/*
+* this will produce @pipes number of connected pipes, @lenght long
+* neighbouring pipes are at @kneeAgle to eachother
+* the pipeline axis(see above) is at @pipelineAngle to x-axis
+*/
+function pipeLine(x, y, length, pipelineAngle, kneeAngle, pipes) {
+  var delta = misalignAngle(x, y, length, kneeAngle, pipes)
+  pipelineAngle = pipelineAngle + delta // to keep pipeline at wanted angle, its first pipe must be tilted
   var c = document.getElementById("myCanvas");
   var ctx = c.getContext("2d");
   ctx.setLineDash([]);
   var ar = new Array();
-  var aLine = lineAtAngle(x,y, length, pipeAngle)
-  ar[0] = aLine;
-  var angle1 = lineAngle(aLine)
+  ar[0] = pipe(x,y, length, pipelineAngle); // first pipe
+  var angle1 = pipeAngle(ar[0])
   var absKneeAngle = -1*(180-angle1-kneeAngle)
   console.log('absKneeAngle:'+absKneeAngle)
   for(var i=1;i<pipes;i++) {
-   aLine = lineAtAngle(aLine.x2, aLine.y2, length, i % 2 == 1 ? absKneeAngle : angle1)
-   ar[i] = aLine;
+   // this pipe starts at coordinates where previous ends
+   ar[i] = pipe(ar[i-1].x2, ar[i-1].y2, length, i % 2 == 1 ? absKneeAngle : angle1)
   }
   for(i=0;i<ar.length;i++) {
     line(ar[i].x1,ar[i].y1,ar[i].x2,ar[i].y2)
   }
-  var axis = new pLine(x,y,aLine.x2,aLine.y2)
+  var axis = new pLine(x,y,ar[ar.length-1].x2,ar[ar.length-1].y2)
   //console.log("axis angle:"+lineAngle(axis))
   line(axis.x1,axis.y1,axis.x2,axis.y2, true)
   //console.log('delta:'+linesAngle(ar[0],axis))
   console.log(axis)
   return axis
 }
+/**
+* will connect @n pipelines into geometrical shape that has @n edges
+*/
 function pipe2D(x, y, length, pipeAngle, kneeAngle, pipes, n) {
   var turnAngle = 360/n
   var segment = pipeLine(x, y, length, pipeAngle, kneeAngle, pipes)
@@ -124,6 +131,9 @@ function pipe2D(x, y, length, pipeAngle, kneeAngle, pipes, n) {
     segment = pipeLine(segment.x2, segment.y2, length, pipeAngle+turnAngle*i, kneeAngle, pipes)
   }
 }
+/**
+* draws a line
+*/
 function line(x,y,x1,y1, dashed) {
   var c = document.getElementById("myCanvas");
   var ctx = c.getContext("2d");
@@ -134,49 +144,14 @@ function line(x,y,x1,y1, dashed) {
   ctx.stroke();
   return new pLine(x,y,x1,y1);
 }
-function lineAtAngle(x, y, length, angle) {
-  var c = document.getElementById("myCanvas");
-  var ctx = c.getContext("2d");
-  //ctx.beginPath();
-  //ctx.moveTo(x, y);
+/**
+* pipe wil start at @(x,y) have @length and be at @angle to x-axis
+*/
+function pipe(x, y, length, angle) {
   var y2 = y + length*Math.sin(angle*Math.PI/180)
   var x2 = x + length*Math.cos(angle*Math.PI/180)
-  //ctx.lineTo(x2,y2);
-  //ctx.stroke();
   return new pLine(x,y,x2,y2);
 }
-//var ctx = c.getContext("2d");
-//ctx.beginPath();
-//fLinija(10, 10, 60, 60);
-//fLinija(60, 60, 120, 180);
-//lineAtAngle(100,100, 50, 45)
-/*
-ctx.lineTo(300, 450);
-ctx.stroke();
-ctx.beginPath();
-ctx.moveTo(10, 10);
-ctx.lineTo(310, 160);
-ctx.stroke();
-*/
-function fLinija(x1, y1, x2,y2) {
-  var c = document.getElementById("myCanvas");
-  var ctx = c.getContext("2d");
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-}
-/*
-function (length, angle) {
-  var c = document.getElementById("myCanvas");
-  var ctx = c.getContext("2d");
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-
-}
-*/
 
 </script>
 
@@ -184,11 +159,11 @@ function (length, angle) {
  <button onclick="btnClick()">Crtaj</button> obriši<input type="checkbox" id="obrisi"><br>
  x<br><input id="x" value="500" size="10"><br>
  y<br><input id="y" value="100" size="10"><br>
- duljina<br><input id="duljina" value="50" size="10"><br>
+ duljina segmeta<br><input id="duljina" value="50" size="10"><br>
  zakreni<br><input id="zakreni" value="0" size="10"><br>
- koleno<br><input id="koleno" value="110" size="10"><br>
- segmenata<br><input id="segmenata" value="7" size="10"><br>
- stranica<br><input id="stranica" value="4" size="10">
+ kut koljena<br><input id="koleno" value="110" size="10"><br>
+ br. segmenata<br><input id="segmenata" value="7" size="10"><br>
+ n-terokut<br><input id="stranica" value="4" size="10">
 </p>
 
 </body>
