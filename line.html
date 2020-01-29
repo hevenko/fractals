@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<style>
+ <style>
 canvas {
   float: right;
 }
@@ -31,16 +31,16 @@ function btnClick() {
   var length = document.getElementById('duljina').value*1
   var pipeAngle = document.getElementById('zakreni').value*1
   var kneeAngle = document.getElementById('koleno').value*1
-  var pipes = document.getElementById('komada').value*1
+  var segments = document.getElementById('segmenata').value*1
   var obrisi = document.getElementById("obrisi").checked
-  var segmenata = document.getElementById('segmenata').value*1
-  
+  var sides = document.getElementById('stranica').value*1
+
   if (obrisi) {
     var c = document.getElementById("myCanvas");
     var ctx = c.getContext("2d");
     clearCanvas(c,ctx)
   }
-  pipe2D(x, y, length, pipeAngle, kneeAngle, pipes, segmenata)
+  pipe2D(x, y, length, pipeAngle, kneeAngle, segments, sides)
   //pipeLine(x, y, length, pipeAngle, kneeAngle, pipes, obrisi)
   //var l1 = lineAtAngle(160,160, 50, aAngle)
   //pipeLine(l1, 50, kneeAngle, 6)
@@ -108,7 +108,7 @@ function pipeLine(x, y, length, pipeAngle, kneeAngle, pipes) {
    ar[i] = aLine;
   }
   for(i=0;i<ar.length;i++) {
-    line(ar[i].x1,ar[i].y1,ar[i].x2,ar[i].y2)	
+    line(ar[i].x1,ar[i].y1,ar[i].x2,ar[i].y2)
   }
   var axis = new pLine(x,y,aLine.x2,aLine.y2)
   //console.log("axis angle:"+lineAngle(axis))
@@ -120,7 +120,7 @@ function pipeLine(x, y, length, pipeAngle, kneeAngle, pipes) {
 function pipe2D(x, y, length, pipeAngle, kneeAngle, pipes, n) {
   var turnAngle = 360/n
   var segment = pipeLine(x, y, length, pipeAngle, kneeAngle, pipes)
-  for (var i=1;i<=n;i++) {
+  for (var i=1;i<n;i++) {
     segment = pipeLine(segment.x2, segment.y2, length, turnAngle*i, kneeAngle, pipes)
   }
 }
@@ -182,15 +182,14 @@ function (length, angle) {
 
 <p>
  <button onclick="btnClick()">Crtaj</button> obriši<input type="checkbox" id="obrisi"><br>
- x<br><input id="x" value="100" size="10"><br>
+ x<br><input id="x" value="500" size="10"><br>
  y<br><input id="y" value="100" size="10"><br>
  duljina<br><input id="duljina" value="50" size="10"><br>
  zakreni<br><input id="zakreni" value="0" size="10"><br>
  koleno<br><input id="koleno" value="110" size="10"><br>
- komada<br><input id="komada" value="7" size="10"><br>
- segmenata<br><input id="segmenata" value="4" size="10">
+ segmenata<br><input id="segmenata" value="7" size="10"><br>
+ stranica<br><input id="stranica" value="4" size="10">
 </p>
 
 </body>
 </html>
-
