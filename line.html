@@ -5,19 +5,40 @@
   canvas {
     float: right;
   }
+  INPUT {
+    font-size:20px
+  }
+  table tr td {
+    padding-rigth:10px
+  }
  </style>
 </head>
 <body>
 
-<canvas id="myCanvas" width="1050" height="850" style="border:1px solid #d3d3d3;"></canvas>
+<table>
+  <tr>
+    <td>x</td>
+    <td>y</td>
+    <td>polygon(n)</td>
+    <td>length</td>
+    <td>tilt</td>
+    <td>parts</td>
+    <td>knee</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td><input id="x" value="500" size="3"></td>
+    <td><input id="y" value="100" size="3"></td>
+    <td><input id="stranica" value="3" size="5"></td>
+    <td><input id="duljina" value="150" size="3"></td>
+    <td><input id="zakreni" value="0" size="3"><br></td>
+    <td><input id="segmenata" value="7" size="3"></td>
+    <td><input id="koleno" value="110" size="3"></td>
+    <td><button onclick="btnClick()">Crtaj</button> obriši<input type="checkbox" id="obrisi"></td>
+  </tr>
+</table>
+<canvas id="myCanvas" width="100%" height="100%" style="border:1px solid #d3d3d3;width:100%;height:100%"></canvas>
 <script>
-
-function pLine(x1, y1, x2, y2) {
-  this.x1 = x1
-  this.y1 = y1
-  this.x2 = x2
-  this.y2 = y2
-}
 
 function btnClick() {
   var x = document.getElementById('x').value*1
@@ -34,27 +55,55 @@ function btnClick() {
     var ctx = c.getContext("2d");
     clearCanvas(c,ctx)
   }
-  //make pipe
-  pipe2D(x, y, length, pipeAngle, kneeAngle, segments, sides)
+  //make piped shape
+  shape(x, y, length, pipeAngle, kneeAngle, segments, sides)
 }
+/**
+* clears drawing canvas
+*/
 function clearCanvas(canvas,ctx) {
   event.preventDefault();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
-//angle between two lines in gradians
+/**
+* pipe prototype
+*/
+function pLine(x1, y1, x2, y2) {
+  this.x1 = x1
+  this.y1 = y1
+  this.x2 = x2
+  this.y2 = y2
+}
+/**
+* metadata
+* @trimAngle - angle between first pipe and pipeline axis
+*/
+function pMeta(trimAngle, pipelineLength) {
+  this.trimAngle = trimAngle
+  this.pipelineLength = pipelineLength
+}
+/**
+* angle between two lines in gradians
+*/
 function linesAngle(l1, l2) {
   var l1ang = pipeAngle(l1)
   var l2ang = pipeAngle(l2)
   return Math.abs(l1ang-l2ang)
 }
 /**
+* @aLine is an instance of pLine (short for line prototype)
+*/
+function lineLength(aLine) {
+  return Math.sqrt(Math.pow(aLine.x2-aLine.x1,2) + Math.pow(aLine.y2-aLine.y1,2))
+}
+/**
 * a pipe is a line of given length and angle to x-axis -> pipe(...). It's a vector.
 * pipeline consists of several pipes, it's axis is a dotted line connecting
 * start of it's first pipe and end of it's last pipe.
-* angle between it's first pipe and it's axis is called misalign angle -> misalignAngle()
-* eg: if first pipe is aligned with x-axis pipeline axis would be at this angle to x-axixs
+* angle between it's first pipe and it's axis is called trim angle -> meta.trimAngle
+* eg: if first pipe is aligned with x-axis then pipeline axis would be at trim angle to x-axixs
 */
-function misalignAngle(x, y, length, kneeAngle, pipes) {//need firs and last coordinates
+function meta(x, y, length, kneeAngle, pipes) {// need firs and last coordinates
   var initialAngle = 0;
   var c = document.getElementById("myCanvas");
   var ctx = c.getContext("2d");
@@ -69,8 +118,8 @@ function misalignAngle(x, y, length, kneeAngle, pipes) {//need firs and last coo
   }
   var axis = new pLine(x,y,aLine.x2,aLine.y2)
   var delta = linesAngle(ar[0],axis)
-  console.log('misalignAngle:'+delta)
-  return delta
+  console.log('trimAngle:'+delta)
+  return new pMeta(delta, lineLength(axis))
 }
 /**
 * angle of pipe to x-axis range: 0-360, counter clockwise
@@ -92,13 +141,15 @@ function pipeAngle(aLine) {
   return res
 }
 /*
-* this will produce @pipes number of connected pipes, @lenght long
+* this will produce @pipes number of connected pipes
 * neighbouring pipes are at @kneeAgle to eachother
 * the pipeline axis(see above) is at @pipelineAngle to x-axis
 */
-function pipeLine(x, y, length, pipelineAngle, kneeAngle, pipes) {
-  var delta = misalignAngle(x, y, length, kneeAngle, pipes)
-  pipelineAngle = pipelineAngle + delta // to keep pipeline at wanted angle, its first pipe must be tilted
+function pipeLine(x, y, pipelineLength, pipelineAngle, kneeAngle, pipes) {
+  var length = 10
+  var metaData = meta(x, y, length, kneeAngle, pipes)
+  length = length*(pipelineLength/metaData.pipelineLength) // adjusting pipe length so required length is met
+  pipelineAngle = pipelineAngle + metaData.trimAngle // to keep pipeline at wanted angle, its first pipe must be trimed
   var c = document.getElementById("myCanvas");
   var ctx = c.getContext("2d");
   ctx.setLineDash([]);
@@ -108,7 +159,7 @@ function pipeLine(x, y, length, pipelineAngle, kneeAngle, pipes) {
   var absKneeAngle = -1*(180-angle1-kneeAngle)
   console.log('absKneeAngle:'+absKneeAngle)
   for(var i=1;i<pipes;i++) {
-   // this pipe starts at coordinates where previous ends
+   // this pipe starts at coordinates where previous ends, thus forming a pipeline
    ar[i] = pipe(ar[i-1].x2, ar[i-1].y2, length, i % 2 == 1 ? absKneeAngle : angle1)
   }
   for(i=0;i<ar.length;i++) {
@@ -124,7 +175,7 @@ function pipeLine(x, y, length, pipelineAngle, kneeAngle, pipes) {
 /**
 * will connect @n pipelines into geometrical shape that has @n edges
 */
-function pipe2D(x, y, length, pipeAngle, kneeAngle, pipes, n) {
+function shape(x, y, length, pipeAngle, kneeAngle, pipes, n) {
   var turnAngle = 360/n
   var segment = pipeLine(x, y, length, pipeAngle, kneeAngle, pipes)
   for (var i=1;i<n;i++) {
@@ -154,17 +205,5 @@ function pipe(x, y, length, angle) {
 }
 
 </script>
-
-<p>
- <button onclick="btnClick()">Crtaj</button> obriši<input type="checkbox" id="obrisi"><br>
- x<br><input id="x" value="500" size="10"><br>
- y<br><input id="y" value="100" size="10"><br>
- duljina segmeta<br><input id="duljina" value="50" size="10"><br>
- zakreni<br><input id="zakreni" value="0" size="10"><br>
- kut koljena<br><input id="koleno" value="110" size="10"><br>
- br. segmenata<br><input id="segmenata" value="7" size="10"><br>
- n-terokut<br><input id="stranica" value="4" size="10">
-</p>
-
 </body>
 </html>
